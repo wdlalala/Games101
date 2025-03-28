@@ -30,45 +30,89 @@ void Application::init() {
 }
 
 void Application::render() {
-  //Simulation loops
-  for (int i = 0; i < config.steps_per_frame; i++) {
+    //Simulation loops
+    for (int i = 0; i < config.steps_per_frame; i++) {
     ropeEuler->simulateEuler(1 / config.steps_per_frame, config.gravity);
     ropeVerlet->simulateVerlet(1 / config.steps_per_frame, config.gravity);
-  }
-  // Rendering ropes
-  Rope *rope;
+    }
+    // Rendering ropes
 
-  for (int i = 0; i < 2; i++) {
-    if (i == 0) {
-      glColor3f(0.0, 0.0, 1.0);
-      rope = ropeEuler;
-    } else {
-      glColor3f(0.0, 1.0, 0.0);
-      rope = ropeVerlet;
+    Rope* rope;
+    GLuint vao, vbo;
+
+    glGenVertexArrays(1, &vao);
+    glGenBuffers(1, &vbo);
+    for (int i = 0; i < 2; i++) {
+        if (i == 0) {
+            glColor3f(0.0, 0.0, 1.0);
+            rope = ropeEuler;
+        }
+        else {
+            glColor3f(0.0, 1.0, 0.0);
+            rope = ropeVerlet;
+        }
     }
 
-    glBegin(GL_POINTS);
+    // Draw points
+    glBindVertexArray(vao);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, rope->masses.size() * sizeof(Vector2D), &rope->masses[0]->position, GL_STATIC_DRAW);
 
-    for (auto &m : rope->masses) {
-      Vector2D p = m->position;
-      glVertex2d(p.x, p.y);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 2, GL_DOUBLE, GL_FALSE, sizeof(Vector2D), (void*)0);
+
+    glDrawArrays(GL_POINTS, 0, rope->masses.size());
+
+    // Draw lines
+    std::vector<Vector2D> lineVertices;
+    for (auto& s : rope->springs) {
+        lineVertices.push_back(s->m1->position);
+        lineVertices.push_back(s->m2->position);
+
+        glBufferData(GL_ARRAY_BUFFER, lineVertices.size() * sizeof(Vector2D), &lineVertices[0], GL_STATIC_DRAW);
+        glDrawArrays(GL_LINES, 0, lineVertices.size());
+
+        glBindVertexArray(0);
     }
 
-    glEnd();
-
-    glBegin(GL_LINES);
-
-    for (auto &s : rope->springs) {
-      Vector2D p1 = s->m1->position;
-      Vector2D p2 = s->m2->position;
-      glVertex2d(p1.x, p1.y);
-      glVertex2d(p2.x, p2.y);
-    }
-
-    glEnd();
+    glDeleteBuffers(1, &vbo);
+    glDeleteVertexArrays(1, &vao);
 
     glFlush();
-  }
+
+    /*Rope *rope;
+
+    for (int i = 0; i < 2; i++) {
+        if (i == 0) {
+            glColor3f(0.0, 0.0, 1.0);
+            rope = ropeEuler;
+        } else {
+            glColor3f(0.0, 1.0, 0.0);
+            rope = ropeVerlet;
+        }
+
+        glBegin(GL_POINTS);
+
+        for (auto &m : rope->masses) {
+            Vector2D p = m->position;
+            glVertex2d(p.x, p.y);
+        }
+
+        glEnd();
+
+        glBegin(GL_LINES);
+
+        for (auto &s : rope->springs) {
+            Vector2D p1 = s->m1->position;
+            Vector2D p2 = s->m2->position;
+            glVertex2d(p1.x, p1.y);
+            glVertex2d(p2.x, p2.y);
+        }
+
+        glEnd();
+
+        glFlush();
+    }*/
 }
 
 void Application::resize(size_t w, size_t h) {

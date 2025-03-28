@@ -13,169 +13,169 @@ using namespace std;
 namespace CGL {
 
 struct point {
-    GLfloat x;
-    GLfloat y;
-    GLfloat s;
-    GLfloat t;
+	GLfloat x;
+	GLfloat y;
+	GLfloat s;
+	GLfloat t;
 };
 
 OSDText::OSDText() {
 
-  use_hdpi = false;
+	use_hdpi = false;
 
-  ft   = new FT_Library;
-  face = new FT_Face;
+	ft   = new FT_Library;
+	face = new FT_Face;
 
-  lines = vector<OSDLine>(); next_id = 0;
+	lines = vector<OSDLine>(); next_id = 0;
 }
 
 OSDText::~OSDText() {
 
-  delete ft;
-  delete font;
-  delete face;
+	delete ft;
+	delete font;
+	delete face;
 
-  lines.clear();
+	lines.clear();
   
-  glDeleteProgram(program);
+	glDeleteProgram(program);
 }
 
 int OSDText::init(bool use_hdpi) {
 
-  this->use_hdpi = use_hdpi;
+	this->use_hdpi = use_hdpi;
 
-  // initialize font library
-  if(FT_Init_FreeType(ft)) {
-    out_err("Cannot init freetype library");
-    return -1;
-  }
+	// initialize font library
+	if(FT_Init_FreeType(ft)) {
+	out_err("Cannot init freetype library");
+	return -1;
+	}
 
-  // decode font and keep in memory
-  string encoded = osdfont_base64;
-  string decoded = base64_decode(encoded);
-  size_t size = decoded.size(); 
-  font = new char[size]; 
-  memcpy(font, decoded.c_str(), size);
+	// decode font and keep in memory
+	string encoded = osdfont_base64;
+	string decoded = base64_decode(encoded);
+	size_t size = decoded.size(); 
+	font = new char[size]; 
+	memcpy(font, decoded.c_str(), size);
 
-  // initialize font face
-  if(FT_New_Memory_Face(*ft, (const FT_Byte*) font, size, 0, face)) {
-    cerr << font;
-    out_err("Cannot open font");
-    return -1;
-  }
+	// initialize font face
+	if(FT_New_Memory_Face(*ft, (const FT_Byte*) font, size, 0, face)) {
+	cerr << font;
+	out_err("Cannot open font");
+	return -1;
+	}
 
-  // compile shaders
-  program = compile_shaders();
-  if(program) {
-      attribute_coord = get_attribu ( program, "coord" );
-      uniform_tex     = get_uniform ( program, "tex"   );
-      uniform_color   = get_uniform ( program, "color" );
-      if (attribute_coord == -1 || uniform_tex == -1 || uniform_color == -1) {
-          return -1;
-      }
-  } else return -1;
+	// compile shaders
+	program = compile_shaders();
+	if(program) {
+		attribute_coord = get_attribu ( program, "coord" );
+		uniform_tex     = get_uniform ( program, "tex"   );
+		uniform_color   = get_uniform ( program, "color" );
+		if (attribute_coord == -1 || uniform_tex == -1 || uniform_color == -1) {
+			return -1;
+		}
+	} else return -1;
 
-  // create the vbo
-  glGenBuffers(1, &vbo);
+	// create the vbo
+	glGenBuffers(1, &vbo);
 
-  return 0;
+	return 0;
 }
 
 void OSDText::render() {
   
-  glUseProgram(program);
+	glUseProgram(program);
 
-  vector<OSDLine>::iterator it = lines.begin();
-  while(it != lines.end()) {
-    draw_line(*it);
-    ++it;
-  }
+	vector<OSDLine>::iterator it = lines.begin();
+	while(it != lines.end()) {
+	draw_line(*it);
+	++it;
+	}
   
-  glUseProgram(0);
+	glUseProgram(0);
 }
 
 void OSDText::resize(size_t w, size_t h) {
-    sx = 2.0f / w;
-    sy = 2.0f / h;
+	sx = 2.0f / w;
+	sy = 2.0f / h;
 }
 
 
 int OSDText::add_line(float x, float y, string text,
-                      size_t size, Color color) {
-  // create new line
-  OSDLine new_line = OSDLine();
-  new_line.x = x;
-  new_line.y = y;
-  new_line.text = text;
-  new_line.size = size;
-  new_line.color = color;
+					  size_t size, Color color) {
+	// create new line
+	OSDLine new_line = OSDLine();
+	new_line.x = x;
+	new_line.y = y;
+	new_line.text = text;
+	new_line.size = size;
+	new_line.color = color;
 
-  // handle HDPI display
-  if (use_hdpi) new_line.size *= 2;
+	// handle HDPI display
+	if (use_hdpi) new_line.size *= 2;
 
-  // update id
-  new_line.id = next_id;
-  next_id++;
+	// update id
+	new_line.id = next_id;
+	next_id++;
 
-  // add line
-  lines.push_back(new_line);
+	// add line
+	lines.push_back(new_line);
 
-  return new_line.id;
+	return new_line.id;
 }
 
 void OSDText::del_line(int line_id) {
   vector<OSDLine>::iterator it = lines.begin();
   while(it != lines.end()) {
-    if(it->id == line_id) { 
-      lines.erase(it);
-      break;
-    }
-    ++it;
+	if(it->id == line_id) { 
+	  lines.erase(it);
+	  break;
+	}
+	++it;
   }
 }
 
 void OSDText::set_anchor(int line_id, float x, float y) {
   vector<OSDLine>::iterator it = lines.begin();
   while(it != lines.end()) {
-    if(it->id == line_id) { 
-      it->x = x;
-      it->y = y;
-      break;
-    }
-    ++it;
+	if(it->id == line_id) { 
+	  it->x = x;
+	  it->y = y;
+	  break;
+	}
+	++it;
   }  
 }
 
 void OSDText::set_text(int line_id, string text) {
   vector<OSDLine>::iterator it = lines.begin();
   while(it != lines.end()) {
-    if(it->id == line_id) { 
-      it->text = text;
-      break;
-    }
-    ++it;
+	if(it->id == line_id) { 
+	  it->text = text;
+	  break;
+	}
+	++it;
   }  
 }
 
 void OSDText::set_size(int line_id, size_t size) {
   vector<OSDLine>::iterator it = lines.begin();
   while(it != lines.end()) {
-    if(it->id == line_id) { 
-      it->size = size;
-      break;
-    }
-    ++it;
+	if(it->id == line_id) { 
+	  it->size = size;
+	  break;
+	}
+	++it;
   }
 }
 
 void OSDText::set_color(int line_id, Color color) {
   vector<OSDLine>::iterator it = lines.begin();
   while(it != lines.end()) {
-    if(it->id == line_id) {
-      it->color = color;
-      break;
-    }
-    ++it;
+	if(it->id == line_id) {
+	  it->color = color;
+	  break;
+	}
+	++it;
   }
 }
 
@@ -218,34 +218,34 @@ void OSDText::draw_line(OSDLine line) {
   const char* text = line.text.c_str();
   for (p = text; *p; p++) {
 
-    // Try to load and render the character
-    if (FT_Load_Char(*face, *p, FT_LOAD_RENDER)) continue;
+	// Try to load and render the character
+	if (FT_Load_Char(*face, *p, FT_LOAD_RENDER)) continue;
 
-    // Upload the glyph bitmap as an alpha texture
-    glTexImage2D(GL_TEXTURE_2D, 
-                 0, GL_ALPHA, g->bitmap.width, g->bitmap.rows, 
-                 0, GL_ALPHA, GL_UNSIGNED_BYTE, g->bitmap.buffer);
+	// Upload the glyph bitmap as an alpha texture
+	glTexImage2D(GL_TEXTURE_2D, 
+				 0, GL_ALPHA, g->bitmap.width, g->bitmap.rows, 
+				 0, GL_ALPHA, GL_UNSIGNED_BYTE, g->bitmap.buffer);
 
-    // calculate the vertex and texture coordinates
-    float x2 =  line.x + g->bitmap_left * sx;
-    float y2 = -line.y - g->bitmap_top  * sy;
-    float w = g->bitmap.width * sx;
-    float h = g->bitmap.rows  * sy;
+	// calculate the vertex and texture coordinates
+	float x2 =  line.x + g->bitmap_left * sx;
+	float y2 = -line.y - g->bitmap_top  * sy;
+	float w = g->bitmap.width * sx;
+	float h = g->bitmap.rows  * sy;
 
-    point box[4] = {
-      {x2, -y2, 0, 0},
-      {x2 + w, -y2, 1, 0},
-      {x2, -y2 - h, 0, 1},
-      {x2 + w, -y2 - h, 1, 1},
-    };
+	point box[4] = {
+	  {x2, -y2, 0, 0},
+	  {x2 + w, -y2, 1, 0},
+	  {x2, -y2 - h, 0, 1},
+	  {x2 + w, -y2 - h, 1, 1},
+	};
 
-    // draw the character to screen 
-    glBufferData(GL_ARRAY_BUFFER, sizeof box, box, GL_DYNAMIC_DRAW);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+	// draw the character to screen 
+	glBufferData(GL_ARRAY_BUFFER, sizeof box, box, GL_DYNAMIC_DRAW);
+	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
-    // Advance the cursor to the start of the next character
-    line.x += (g->advance.x >> 6) * sx;
-    line.y += (g->advance.y >> 6) * sy;
+	// Advance the cursor to the start of the next character
+	line.x += (g->advance.x >> 6) * sx;
+	line.y += (g->advance.y >> 6) * sy;
   }
 
   glDisableVertexAttribArray(attribute_coord);
@@ -312,9 +312,9 @@ GLuint OSDText::compile_shaders() {
   glGetShaderiv(vert_shader, GL_COMPILE_STATUS, &result);
   glGetShaderiv(vert_shader, GL_INFO_LOG_LENGTH, &info_length);
   if ( info_length > 0 ){
-    vector<char> vert_shader_errmsg(info_length+1);
-    glGetShaderInfoLog(vert_shader, info_length, NULL, &vert_shader_errmsg[0]);
-    printf("%s\n", &vert_shader_errmsg[0]);
+	vector<char> vert_shader_errmsg(info_length+1);
+	glGetShaderInfoLog(vert_shader, info_length, NULL, &vert_shader_errmsg[0]);
+	printf("%s\n", &vert_shader_errmsg[0]);
   }
 
   // compile Fragment Shader
@@ -325,9 +325,9 @@ GLuint OSDText::compile_shaders() {
   glGetShaderiv(frag_shader, GL_COMPILE_STATUS, &result);
   glGetShaderiv(frag_shader, GL_INFO_LOG_LENGTH, &info_length);
   if ( info_length > 0 ){
-    vector<char> frag_shader_errmsg(info_length+1);
-    glGetShaderInfoLog(frag_shader, info_length, NULL, &frag_shader_errmsg[0]);
-    printf("%s\n", &frag_shader_errmsg[0]);
+	vector<char> frag_shader_errmsg(info_length+1);
+	glGetShaderInfoLog(frag_shader, info_length, NULL, &frag_shader_errmsg[0]);
+	printf("%s\n", &frag_shader_errmsg[0]);
   }
 
   // link the program
@@ -340,9 +340,9 @@ GLuint OSDText::compile_shaders() {
   glGetProgramiv(program, GL_LINK_STATUS, &result);
   glGetProgramiv(program, GL_INFO_LOG_LENGTH, &info_length);
   if ( info_length > 0 ){
-    vector<char> program_errmsg(info_length+1);
-    glGetProgramInfoLog(program, info_length, NULL, &program_errmsg[0]);
-    printf("%s\n", &program_errmsg[0]);
+	vector<char> program_errmsg(info_length+1);
+	glGetProgramInfoLog(program, info_length, NULL, &program_errmsg[0]);
+	printf("%s\n", &program_errmsg[0]);
   }
 
   glDetachShader(1, vert_shader);
@@ -356,14 +356,14 @@ GLuint OSDText::compile_shaders() {
 GLint OSDText::get_attribu(GLuint program, const char *name) {
   GLint attribute = glGetAttribLocation(program, name);
   if(attribute == -1)
-    fprintf(stderr, "Cannot bind attribute %s\n", name);
+	fprintf(stderr, "Cannot bind attribute %s\n", name);
   return attribute;
 }
 
 GLint OSDText::get_uniform(GLuint program, const char *name) {
   GLint uniform = glGetUniformLocation(program, name);
   if(uniform == -1)
-    fprintf(stderr, "Cannot bind uniform %s\n", name);
+	fprintf(stderr, "Cannot bind uniform %s\n", name);
   return uniform;
 }
 
